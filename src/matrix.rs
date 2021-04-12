@@ -2,7 +2,6 @@ pub mod matrix {
 
     use crate::codons::codons;
     // https://stackoverflow.com/questions/64498617/how-to-transpose-a-vector-of-vectors-in-rust
-    // would be nice to avoid clone but whatever.
 
     pub fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>>
     where
@@ -14,10 +13,13 @@ pub mod matrix {
             .collect()
     }
 
-    pub fn create_matrix(aa: &[u8]) -> Vec<Vec<&str>> {
+    pub fn create_matrix(aa: &[u8], ignore: bool) -> Vec<Vec<&str>> {
         let mut vec = Vec::new();
         for a in aa {
-            vec.push(codons::get_codon_string(*a));
+            match ignore {
+                true => vec.push(codons::get_codon_string(*a)),
+                false => vec.push(codons::get_codon_string_both(*a)),
+            }
         }
         vec
     }

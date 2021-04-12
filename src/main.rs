@@ -4,7 +4,7 @@
 
 use aa2nucaln::writer::writer;
 use bio::io::fasta;
-use clap::{App, Arg};
+use clap::{value_t, App, Arg};
 
 fn main() {
     // command line options
@@ -18,12 +18,23 @@ fn main() {
                 .long("fasta")
                 .takes_value(true)
                 .required(true)
-                .help("The reference fasta file."),
+                .help("The reference amino acid alignment file in fasta format."),
+        )
+        .arg(
+            Arg::with_name("ignore")
+                .short("i")
+                .long("ignore")
+                .takes_value(true)
+                .required(false)
+                .default_value("true")
+                .help("Should the lower-case letters in an amino acid alignment be ignored?"),
         )
         .get_matches();
     // parse command line options
     let input_fasta = matches.value_of("fasta").unwrap();
+    let ignore = value_t!(matches.value_of("ignore"), bool).unwrap_or_else(|e| e.exit());
+
     // read in the fasta.
     let fasta_reader = fasta::Reader::from_file(input_fasta).expect("[-]\tPath invalid.");
-    writer::write_faa(fasta_reader)
+    writer::write_faa(fasta_reader, ignore)
 }
