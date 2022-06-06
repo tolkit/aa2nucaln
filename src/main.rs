@@ -2,27 +2,28 @@
 // Convert an amino acid alignment to a nucleotide alignment for HMM training.
 // Prints to stdout only, nothing fancy.
 
-use aa2nucaln::writer::writer;
+use aa2nucaln::is_stdin;
+use aa2nucaln::writer;
+use anyhow::bail;
+use anyhow::Result;
 use bio::io::fasta;
-use clap::{value_t, App, Arg};
+use clap::{Arg, Command};
+use std::io;
 
-fn main() {
+fn main() -> Result<()> {
     // command line options
-    let matches = App::new("aa2nucaln")
+    let matches = Command::new("aa2nucaln")
         .version(clap::crate_version!())
         .author("Max Brown <mb39@sanger.ac.uk>")
+        // .arg_required_else_help(true)
         .about("Convert an amino acid alignment to a nucelotide alignment.\nFor more info, see: https://academic.oup.com/bioinformatics/article/31/11/1836/2365396")
         .arg(
-            Arg::with_name("fasta")
-                .short("f")
-                .long("fasta")
-                .takes_value(true)
-                .required(true)
+            Arg::new("fasta")
                 .help("The reference amino acid alignment file in fasta format."),
         )
         .arg(
-            Arg::with_name("ignore")
-                .short("i")
+            Arg::new("ignore")
+                .short('i')
                 .long("ignore")
                 .takes_value(true)
                 .required(false)
@@ -30,11 +31,25 @@ fn main() {
                 .help("Should the lower-case letters in an amino acid alignment be ignored?"),
         )
         .get_matches();
+        
     // parse command line options
-    let input_fasta = matches.value_of("fasta").unwrap();
-    let ignore = value_t!(matches.value_of("ignore"), bool).unwrap_or_else(|e| e.exit());
+    let input_fasta = matches.value_of("fasta");
+    let ignore = matches.value_of_t("ignore")?;
 
-    // read in the fasta.
-    let fasta_reader = fasta::Reader::from_file(input_fasta).expect("[-]\tPath invalid.");
-    writer::write_faa(fasta_reader, ignore)
+    match input_fasta {
+        Some(f) => {
+            // read in the fasta.
+            let fasta_reader = fasta::Reader::from_file(f)?;
+            writer::write_faa(fasta_reader, ignore)?;
+        }
+        None => match is_stdin() {
+            true => {
+                let fasta_reader = fasta::Reader::new(io::stdin());
+                writer::write_faa(fasta_reader, ignore)?;
+            }
+            false => bail!("There was no input from STDIN."),
+        },
+    }
+
+    Ok(())
 }
